@@ -413,16 +413,26 @@ sub create_element_from_spec
                     );
                 } 
 
-                $node = $dom->createElement($e);
-                if (ref $value && eval { $value->isa('XML::RSS::LibXML::MagicElement') }) {
-                    foreach my $attr ($value->attributes) {
-                        $node->setAttribute($attr, $value->{$attr});
-                    }
-                } elsif ($callback) {
-                    $callback->($value);
+                my $values;
+
+                if (($e eq 'category' || $e eq 'dc:subject') && ref $value eq 'ARRAY') {
+                    $values = $value;
+                } else {
+                    $values = [$value];
                 }
-                $node->appendText($value);
-                $parent->appendChild($node);
+
+                foreach my $value (@$values) {
+                    $node = $dom->createElement($e);
+                    if (ref $value && eval { $value->isa('XML::RSS::LibXML::MagicElement') }) {
+                        foreach my $attr ($value->attributes) {
+                            $node->setAttribute($attr, $value->{$attr});
+                        }
+                    } elsif ($callback) {
+                        $callback->($value);
+                    }
+                    $node->appendText($value);
+                    $parent->appendChild($node);
+                }
                 last;
             }
         }

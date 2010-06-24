@@ -1,6 +1,6 @@
 use strict;
 use File::Spec;
-use Test::More tests => 29;
+use Test::More tests => 32;
 
 BEGIN {
   use_ok("XML::RSS::LibXML");
@@ -21,6 +21,7 @@ use constant RSS_VERSION    => "2.0";
 use constant RSS_SAVEAS     => File::Spec->catfile(BASEDIR, RSS_VERSION."-generated.xml");
 use constant RSS_MOD_PREFIX => "my";
 use constant RSS_MOD_URI    => 'http://purl.org/my/rss/module/';
+use constant RSS_CATEGORY   => 'MyCategory';
 
 use constant RSS_BLOGCHANNEL_PREFIX => "blogChannel";
 use constant RSS_BLOGCHANNEL_URI    => "http://backend.userland.com/blogChannelModule";
@@ -49,7 +50,7 @@ ok( $rss->channel(
 		 docs           => 'http://backend.userland.com/rss',
 		 managingEditor => 'editor\@example.com',
 		 webMaster      => 'webmaster\@example.com',
-		 category       => 'MyCategory',
+		 category       => RSS_CATEGORY,
 		 ttl            => '60',
 		 'generator'    => 'XML::RSS::LibXML Test',
 		), "Set RSS channel" );
@@ -75,7 +76,7 @@ ok($rss->add_item(
 		  'link'      => RSS_ITEM_LINK,
 		  description => RSS_ITEM_DESC,
 		  author      => RSS_CREATOR,
-		  category    => 'MyCategory',
+		  category    => 'Foo',
 		  comments    => "http://example.com/$short_date/comments.html",
 		  permaLink   => "http://example.com/$short_date",
 		  pubDate     => $pub_date,
@@ -83,6 +84,11 @@ ok($rss->add_item(
 		  sourceUrl   => 'http://example.com',
 		  enclosure   => { type=>"application/x-bittorrent", url => 'http://127.0.0.1/torrents/The_Passion_of_Dave_Winer.torrent' },
 		 ), "Set one RSS item" );
+
+ok($rss->add_item(
+		  title       => RSS_ITEM_TITLE,
+		  category    => [ 'Foo', 'Bar', 'Baz' ],
+		 ), "Add one RSS item using array ref as category" );
 
 ok( $rss->add_module( prefix => RSS_MOD_PREFIX, uri => RSS_MOD_URI ),
 	"Added module: " . RSS_MOD_PREFIX );
@@ -117,7 +123,7 @@ is( $@, '', "Parsed " . RSS_SAVEAS );
 is( $rss->{channel}->{lastBuildDate}, $current_date,
        "Last built: " . $current_date );
 
-is( $rss->{channel}->{category}, 'MyCategory', 'channel->{category}');
+is( $rss->{channel}->{category}, RSS_CATEGORY, 'channel->{category}');
 
 cmp_ok( keys %{ $rss->{namespaces} }, ">=", 1,
        "RSS feed has at least one namespace");
@@ -133,11 +139,15 @@ SKIP: {
 
 isa_ok( $rss->{'items'} ,"ARRAY", "RSS object has an array of objects" );
 
-is( scalar( @{$rss->{'items'}} ), 1, "RSS object has one item" );
+is( scalar( @{$rss->{'items'}} ), 2, "RSS object has two items" );
 
 is( $rss->{items}->[0]->{title},       RSS_ITEM_TITLE, RSS_ITEM_TITLE );
 
 is( $rss->{items}->[0]->{link},        RSS_ITEM_LINK,  RSS_ITEM_LINK  );
+
+is_deeply( $rss->{items}->[0]->{category},    'Foo' , "Correct category on entry 1");
+
+is_deeply( $rss->{items}->[1]->{category},    [ 'Foo', 'Bar', 'Baz' ] , "Correct categories on entry 2");
 
 is( $rss->{items}->[0]->{description}, RSS_ITEM_DESC,  RSS_ITEM_DESC  );
 
